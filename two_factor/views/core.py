@@ -1,3 +1,5 @@
+from datetime import datetime
+import imp
 import logging
 import time
 import warnings
@@ -9,7 +11,8 @@ import django_otp
 import qrcode
 import qrcode.image.svg
 from django.conf import settings
-from django.contrib.auth import REDIRECT_FIELD_NAME, login
+from django.contrib import messages
+from django.contrib.auth import REDIRECT_FIELD_NAME, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.views import SuccessURLAllowedHostsMixin
@@ -26,7 +29,7 @@ from django.utils.translation import gettext as _
 from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_protect
 from django.views.decorators.debug import sensitive_post_parameters
-from django.views.generic import FormView, TemplateView
+from django.views.generic import DeleteView, FormView, TemplateView
 from django.views.generic.base import View
 from django_otp import devices_for_user
 from django_otp.decorators import otp_required
@@ -34,19 +37,18 @@ from django_otp.plugins.otp_static.models import StaticDevice, StaticToken
 from django_otp.util import random_hex
 
 from two_factor import signals
-from two_factor.plugins.phonenumber.forms import PhoneNumberForm
-from two_factor.plugins.phonenumber.models import PhoneDevice
-from two_factor.plugins.phonenumber.utils import (
-    backup_phones, get_available_phone_methods,
-)
-from two_factor.plugins.yubikey.forms import YubiKeyDeviceForm
-from two_factor.utils import get_available_methods, totp_digits
+from two_factor.models import get_available_methods
+from two_factor.utils import totp_digits
+
+from sendgrid.helpers.mail import Mail
+from payroll_web.utils import get_company, send_email
 
 from ..forms import (
     AuthenticationTokenForm, BackupTokenForm, DeviceValidationForm, MethodForm,
-    TOTPDeviceForm,
+    PhoneNumberForm, PhoneNumberMethodForm, TOTPDeviceForm, YubiKeyDeviceForm,
 )
-from ..utils import default_device, get_otpauth_url
+from ..models import PhoneDevice, get_available_phone_methods
+from ..utils import backup_phones, default_device, get_otpauth_url
 from .utils import (
     IdempotentSessionWizardView, class_view_decorator,
     get_remember_device_cookie, validate_remember_device_cookie,
@@ -64,12 +66,15 @@ try:
 except ImportError:
     ValidationService = RemoteYubikeyDevice = None
 
+from archipay.settings import base as site_settings
 
 logger = logging.getLogger(__name__)
 
 REMEMBER_COOKIE_PREFIX = getattr(settings, 'TWO_FACTOR_REMEMBER_COOKIE_PREFIX', 'remember-cookie_')
 
 
+@class_view_decorator(sensitive_post_parameters())
+@class_view_decorator(never_cache)
 class LoginView(SuccessURLAllowedHostsMixin, IdempotentSessionWizardView):
     """
     View for handling the login process, including OTP verification.
@@ -493,7 +498,30 @@ class SetupView(IdempotentSessionWizardView):
             raise NotImplementedError("Unknown method '%s'" % self.get_method())
 
         django_otp.login(self.request, device)
+
+        #we will send an email here
+        company = get_company(self.request)
+        now = datetime.now().strftime('%d-%B-%Y %H:%M')
+        email_message = Mail(
+            from_email = site_settings.DEFAULT_FROM_EMAIL,
+            to_emails= company.email if company.email else self.request.user.email,
+            subject= 'Two-Factor Authentication Enabled',
+            html_content=(
+                f'<p>Hi { company.primary_contact_name } two factor authentication was enabled on your The Payroll App account by {self.request.user} on {now}.</p>'
+
+                f'Please contact {site_settings.ADMIN_EMAIL} if you suspect malicious or fraudlent activity.'
+                )
+            )
+        email_notification_message = f"Two-Factor Authentication successfully enabled and notication email sent."
+        send_email(email_message=email_message, 
+            notification_message=email_notification_message,
+            request=self.request)
+
+        # # logout the user
+        logout(self.request)
+
         return redirect(self.success_url)
+    
 
     def get_form_kwargs(self, step=None):
         kwargs = {}
@@ -613,6 +641,94 @@ class BackupTokensView(FormView):
 
 @class_view_decorator(never_cache)
 @class_view_decorator(otp_required)
+class PhoneSetupView(IdempotentSessionWizardView):
+    """
+    View for configuring a phone number for receiving tokens.
+
+    A user can have multiple backup :class:`~two_factor.models.PhoneDevice`
+    for receiving OTP tokens. If the primary phone number is not available, as
+    the battery might have drained or the phone is lost, these backup phone
+    numbers can be used for verification.
+    """
+    template_name = 'two_factor/core/phone_register.html'
+    success_url = settings.LOGIN_REDIRECT_URL
+    form_list = (
+        ('setup', PhoneNumberMethodForm),
+        ('validation', DeviceValidationForm),
+    )
+    key_name = 'key'
+
+    def get(self, request, *args, **kwargs):
+        """
+        Start the setup wizard. Redirect if no phone methods available.
+        """
+        if not get_available_phone_methods():
+            return redirect(self.success_url)
+        return super().get(request, *args, **kwargs)
+
+    def done(self, form_list, **kwargs):
+        """
+        Store the device and redirect to profile page.
+        """
+        self.get_device(user=self.request.user, name='backup').save()
+        return redirect(self.success_url)
+
+    def render_next_step(self, form, **kwargs):
+        """
+        In the validation step, ask the device to generate a challenge.
+        """
+        next_step = self.steps.next
+        if next_step == 'validation':
+            self.get_device().generate_challenge()
+        return super().render_next_step(form, **kwargs)
+
+    def get_form_kwargs(self, step=None):
+        """
+        Provide the device to the DeviceValidationForm.
+        """
+        if step == 'validation':
+            return {'device': self.get_device()}
+        return {}
+
+    def get_device(self, **kwargs):
+        """
+        Uses the data from the setup step and generated key to recreate device.
+        """
+        kwargs = kwargs or {}
+        kwargs.update(self.storage.validated_step_data.get('setup', {}))
+        return PhoneDevice(key=self.get_key(), **kwargs)
+
+    def get_key(self):
+        """
+        The key is preserved between steps and stored as ascii in the session.
+        """
+        if self.key_name not in self.storage.extra_data:
+            key = random_hex(20)
+            self.storage.extra_data[self.key_name] = key
+        return self.storage.extra_data[self.key_name]
+
+    def get_context_data(self, form, **kwargs):
+        kwargs.setdefault('cancel_url', resolve_url(self.success_url))
+        return super().get_context_data(form, **kwargs)
+
+
+@class_view_decorator(never_cache)
+@class_view_decorator(otp_required)
+class PhoneDeleteView(DeleteView):
+    """
+    View for removing a phone number used for verification.
+    """
+    success_url = settings.LOGIN_REDIRECT_URL
+
+    def get_queryset(self):
+        return self.request.user.phonedevice_set.filter(name='backup')
+
+    def get_success_url(self):
+        return resolve_url(self.success_url)
+
+
+@class_view_decorator(never_cache)
+@class_view_decorator(otp_required)
 class SetupCompleteView(TemplateView):
     """
     View congratulation the user when OTP setup has completed.
@@ -642,7 +758,8 @@ class QRGeneratorView(View):
     }
 
     def get_issuer(self):
-        return get_current_site(self.request).name
+        site = site_settings.TWO_FACTOR_SITE_NAME
+        return site if site else get_current_site(self.request).name
 
     def get(self, request, *args, **kwargs):
         # Get the data from the session

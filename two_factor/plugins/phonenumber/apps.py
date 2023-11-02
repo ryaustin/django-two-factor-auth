@@ -18,7 +18,7 @@ class TwoFactorPhoneNumberConfig(AppConfig):
 
 def update_registered_methods(sender, setting, value, **kwargs):
     # This allows for dynamic registration, typically when testing.
-    from .method import PhoneCallMethod, SMSMethod
+    from .method import PhoneCallMethod, SMSMethod, WhatsAppMethod
 
     phone_number_app_installed = apps.is_installed('two_factor.plugins.phonenumber')
 
@@ -30,3 +30,7 @@ def update_registered_methods(sender, setting, value, **kwargs):
         registry.register(SMSMethod())
     else:
         registry.unregister('sms')
+    if getattr(settings, 'TWO_FACTOR_WHATSAPP_GATEWAY', None):
+        registry.register(WhatsAppMethod())
+    else:
+        registry.unregister('wa')

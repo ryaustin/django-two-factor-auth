@@ -79,7 +79,7 @@ class LoginView(RedirectURLMixin, IdempotentSessionWizardView):
     The login process is composed like a wizard. The first step asks for the
     user's credentials. If the credentials are correct, the wizard proceeds to
     the OTP verification step. If the user has a default OTP device configured,
-    that device is asked to generate a token (send sms / call phone) and the
+    that device is asked to generate a token (send sms / send whatsapp / call phone) and the
     user is asked to provide the generated token. The backup devices are also
     listed, allowing the user to select a backup device for verification.
     """
@@ -433,10 +433,10 @@ class SetupView(RedirectURLMixin, IdempotentSessionWizardView):
 
     The first step of the wizard shows an introduction text, explaining how OTP
     works and why it should be enabled. The user has to select the verification
-    method (generator / call / sms) in the second step. Depending on the method
+    method (generator / call / sms / whatsapp) in the second step. Depending on the method
     selected, the third step configures the device. For the generator method, a
     QR code is shown which can be scanned using a mobile phone app and the user
-    is asked to provide a generated token. For call and sms methods, the user
+    is asked to provide a generated token. For call, sms and whatsapp methods, the user
     provides the phone number which is then validated in the final step.
     """
     success_url = 'two_factor:setup_complete'
@@ -506,9 +506,7 @@ class SetupView(RedirectURLMixin, IdempotentSessionWizardView):
         except MethodNotFoundError:
             for method in available_methods:
                 form_list.update(method.get_setup_forms(self))
-        else:
-            form_list.update(method.get_setup_forms(self))
-        if {'sms', 'call'} & set(form_list.keys()):
+        if {'sms', 'wa', 'call'} & set(form_list.keys()):
             form_list['validation'] = DeviceValidationForm
         return form_list
 
@@ -546,7 +544,7 @@ class SetupView(RedirectURLMixin, IdempotentSessionWizardView):
             device = form.save()
 
         # PhoneNumberForm / YubiKeyDeviceForm / EmailForm / WebauthnDeviceValidationForm
-        elif method.code in ('call', 'sms', 'yubikey', 'email', 'webauthn'):
+        elif method.code in ('call', 'sms', 'wa', 'yubikey', 'email', 'webauthn'):
             device = self.get_device()
             device.confirmed = True
             device.save()
@@ -582,7 +580,7 @@ class SetupView(RedirectURLMixin, IdempotentSessionWizardView):
         """
         Uses the data from the setup step and generated key to recreate device.
 
-        Only used for call / sms -- generator uses other procedure.
+        Only used for call / sms / wa -- generator uses other procedure.
         """
         if not getattr(self, '_device', None):
             method = self.get_method()

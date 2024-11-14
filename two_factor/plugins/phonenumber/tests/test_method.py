@@ -1,7 +1,9 @@
 from django.test import TestCase
 
 from tests.utils import UserMixin
-from two_factor.plugins.phonenumber.method import PhoneCallMethod, SMSMethod, WhatsAppMethod
+from two_factor.plugins.phonenumber.method import (
+    PhoneCallMethod, SMSMethod, WhatsAppMethod,
+)
 
 
 class PhoneMethodBaseTestMixin(UserMixin):

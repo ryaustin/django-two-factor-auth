@@ -47,6 +47,6 @@ setup(
         'Programming Language :: Python :: 3.10',
         'Programming Language :: Python :: 3.11',
         'Topic :: Security',
-        'Topic :: System :: Systems Administration :: Authentication/Directory',
+        'Topic :: System :: Systems Administration :: Authentication/Directory'
     ],
 )

@@ -10,11 +10,40 @@ from twilio.rest import Client
 from two_factor.middleware.threadlocals import get_current_request
 
 # Supported voice languages, see http://bit.ly/187I5cr
-VOICE_LANGUAGES = ('en', 'en-gb', 'es', 'fr', 'it', 'de', 'da-DK', 'de-DE',
-                   'en-AU', 'en-CA', 'en-GB', 'en-IN', 'en-US', 'ca-ES',
-                   'es-ES', 'es-MX', 'fi-FI', 'fr-CA', 'fr-FR', 'it-IT',
-                   'ja-JP', 'ko-KR', 'nb-NO', 'nl-NL', 'pl-PL', 'pt-BR',
-                   'pt-PT', 'ru-RU', 'sv-SE', 'zh-CN', 'zh-HK', 'zh-TW')
+VOICE_LANGUAGES = (
+    "en",
+    "en-gb",
+    "es",
+    "fr",
+    "it",
+    "de",
+    "da-DK",
+    "de-DE",
+    "en-AU",
+    "en-CA",
+    "en-GB",
+    "en-IN",
+    "en-US",
+    "ca-ES",
+    "es-ES",
+    "es-MX",
+    "fi-FI",
+    "fr-CA",
+    "fr-FR",
+    "it-IT",
+    "ja-JP",
+    "ko-KR",
+    "nb-NO",
+    "nl-NL",
+    "pl-PL",
+    "pt-BR",
+    "pt-PT",
+    "ru-RU",
+    "sv-SE",
+    "zh-CN",
+    "zh-HK",
+    "zh-TW",
+)
 
 
 class Twilio:
@@ -91,24 +120,26 @@ class Twilio:
         """
         send whatsapp using template 'two_factor/twilio/sms_message.html'
         """
-        PLACE_TOKEN_AT_END_OF_MESSAGE = getattr(settings, 'PLACE_TOKEN_AT_END_OF_MESSAGE', False)
+        # PLACE_TOKEN_AT_END_OF_MESSAGE = getattr(settings, "PLACE_TOKEN_AT_END_OF_MESSAGE", False)
 
-        if PLACE_TOKEN_AT_END_OF_MESSAGE:
-          whatsapp_approved_message = f"{getattr(settings, 'WHATSAPP_APPROVED_MESSAGE', 'Your OTP code is')} {token}"
-        else:
-          whatsapp_approved_message = f"{token} {getattr(settings, 'WHATSAPP_APPROVED_MESSAGE', 'is your OTP code.')}"
+        # if PLACE_TOKEN_AT_END_OF_MESSAGE:
+        #     whatsapp_approved_message = f"{getattr(settings, 'WHATSAPP_APPROVED_MESSAGE', 'Your OTP code is')} {token}"
+        # else:
+        #     whatsapp_approved_message = (
+        #         f"{token} {getattr(settings, 'WHATSAPP_APPROVED_MESSAGE', 'is your OTP code.')}"
+        #     )
 
-        body = whatsapp_approved_message
-        send_kwargs = {
-            'to': f"whatsapp:{device.number.as_e164}",
-            'body': body
-        }
-        messaging_service_sid = getattr(settings, 'TWILIO_MESSAGING_SERVICE_SID_WHATSAPP', None)
+        # body = whatsapp_approved_message
+        send_kwargs = {"to": f"whatsapp:{device.number.as_e164}",
+                       "content_sid": getattr(settings, "TWILIO_WHATSAPP_TWO_FACTOR_TEMPLATE_SID", None),
+                       "content_varaibles": {"1": token}
+                       }
+        messaging_service_sid = getattr(settings, "TWILIO_MESSAGING_SERVICE_SID_WHATSAPP", None)
         if messaging_service_sid is not None:
-            send_kwargs['messaging_service_sid'] = messaging_service_sid
+            send_kwargs["messaging_service_sid"] = messaging_service_sid
         else:
-            send_kwargs['from_'] = (
-                f"whatsapp:{getattr(settings, 'TWILIO_CALLER_ID_WHATSAPP', settings.TWILIO_CALLER_ID)}",
+            send_kwargs["from_"] = (
+                f"whatsapp:{getattr(settings, 'TWILIO_CALLER_ID_WHATSAPP', getattr(settings, 'TWILIO_CALLER_ID'))}",
             )
 
         self.client.messages.create(**send_kwargs)

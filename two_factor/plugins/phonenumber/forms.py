@@ -18,8 +18,9 @@ class PhoneNumberMethodForm(forms.ModelForm):
     @staticmethod
     def get_available_choices():
         choices = []
-        for method in get_available_phone_methods():
-            choices.append((method.code, method.verbose_name))
+        for method_id, verbose_name in get_available_phone_methods():
+            # Use the first tuple element as the code and the second as the display name
+            choices.append((method_id, verbose_name))
         return choices
 
     def __init__(self, **kwargs):

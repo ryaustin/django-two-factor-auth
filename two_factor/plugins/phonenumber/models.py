@@ -10,7 +10,7 @@ from phonenumber_field.modelfields import PhoneNumberField
 
 from two_factor.gateways import make_call, send_sms, send_whatsapp
 
-WHATSAPP = 'wa'
+WHATSAPP = 'whatsapp'
 PHONE_METHODS = (
     ('call', _('Phone Call')),
     ('sms', _('Text Message')),
@@ -35,7 +35,7 @@ class PhoneDevice(ThrottlingMixin, Device):
                            validators=[key_validator],
                            default=random_hex,
                            help_text="Hex-encoded secret key")
-    method = models.CharField(max_length=4, choices=PHONE_METHODS,
+    method = models.CharField(max_length=8, choices=PHONE_METHODS,
                               verbose_name=_('method'))
 
     def __repr__(self):

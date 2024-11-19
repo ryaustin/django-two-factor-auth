@@ -28,7 +28,7 @@
     <p>{% blocktrans trimmed %}Please enter the phone number you wish to receive the
       text messages on. This number will be validated in the next step.
       {% endblocktrans %}</p>
-  {% elif wizard.steps.current == 'wa' %}
+  {% elif wizard.steps.current == 'whatsapp' %}
       <p>{% blocktrans trimmed %}Please enter the phone number you wish to receive the
         whatsapp messages on. This number will be validated in the next step.
         {% endblocktrans %}</p>
@@ -43,7 +43,7 @@
       {% elif device.method == 'sms' %}
         <p>{% blocktrans trimmed %}We sent you a text message, please enter the tokens we
           sent.{% endblocktrans %}</p>
-      {% elif device.method == 'wa' %}
+      {% elif device.method == 'whatsapp' %}
         <p>{% blocktrans trimmed %}We sent you a whatsapp message, please enter the tokens we
           sent.{% endblocktrans %}</p>
       {% endif %}

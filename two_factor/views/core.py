@@ -513,7 +513,7 @@ class SetupView(RedirectURLMixin, IdempotentSessionWizardView):
         except MethodNotFoundError:
             for method in available_methods:
                 form_list.update(method.get_setup_forms(self))
-        if {'sms', 'wa', 'call'} & set(form_list.keys()):
+        if {'sms', 'whatsapp', 'call'} & set(form_list.keys()):
             form_list['validation'] = DeviceValidationForm
         return form_list
 
@@ -551,7 +551,7 @@ class SetupView(RedirectURLMixin, IdempotentSessionWizardView):
             device = form.save()
 
         # PhoneNumberForm / YubiKeyDeviceForm / EmailForm / WebauthnDeviceValidationForm
-        elif method.code in ('call', 'sms', 'wa', 'yubikey', 'email', 'webauthn'):
+        elif method.code in ('call', 'sms', 'whatsapp', 'yubikey', 'email', 'webauthn'):
             device = self.get_device()
             device.save()
 
@@ -586,7 +586,7 @@ class SetupView(RedirectURLMixin, IdempotentSessionWizardView):
         """
         Uses the data from the setup step and generated key to recreate device.
 
-        Only used for call / sms / wa -- generator uses other procedure.
+        Only used for call / sms / whatsapp -- generator uses other procedure.
         """
         if not getattr(self, '_device', None):
             method = self.get_method()

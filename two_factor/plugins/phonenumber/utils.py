@@ -38,8 +38,13 @@ def backup_phones(user):
         return []
 
     phones = []
-    for method in get_available_phone_methods():
-        phones += list(method.get_devices(user))
+    for method_name, _ in get_available_phone_methods():
+        try:
+            method = registry.get_method(method_name)  # Fetch method object
+            phones += list(method.get_devices(user))
+        except MethodNotFoundError:
+            # Handle missing method gracefully
+            continue
 
     return [phone for phone in phones if phone.name == 'backup']
 

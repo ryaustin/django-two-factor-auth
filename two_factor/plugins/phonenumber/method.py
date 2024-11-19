@@ -48,7 +48,7 @@ class SMSMethod(PhoneMethodBase):
     verbose_action = _('We sent you a text message, please enter the token we sent.')
 
 class WhatsAppMethod(PhoneMethodBase):
-    code = 'wa'
+    code = 'whatsapp'
     verbose_name = _('WhatsApp message')
     action = _('Send WhatsApp message to %s')
     verbose_action = _('We sent you a WhatsApp message, please enter the token we sent.')

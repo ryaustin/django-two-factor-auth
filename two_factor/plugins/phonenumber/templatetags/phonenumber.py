@@ -39,7 +39,7 @@ def device_action(device):
     number = mask_phone_number_utils(format_phone_number_utils(device.number))
     if device.method == 'sms':
         return _('Send text message to %s') % number
-    elif device.method == 'wa':
+    elif device.method == 'whatsapp':
         return _('Send WhatsApp message to %s') % number
     elif device.method == 'call':
         return _('Call number %s') % number

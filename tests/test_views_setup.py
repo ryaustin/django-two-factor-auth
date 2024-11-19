@@ -274,12 +274,12 @@ class TestSetupWhatsApp(TestCase):
 
         # Step 2: Select WhatsApp method
         response = self._post(data={'setup_view-current_step': 'method',
-                                    'method-method': 'wa'})
+                                    'method-method': 'whatsapp'})
         self.assertContains(response, 'Number:')
 
         # Step 3: Enter phone number
-        response = self._post(data={'setup_view-current_step': 'wa',
-                                    'wa-number': '+31101234567'})
+        response = self._post(data={'setup_view-current_step': 'whatsapp',
+                                    'whatsapp-number': '+31101234567'})
         self.assertContains(response, 'Token:')
         self.assertContains(response, 'We sent you a WhatsApp message')
 
@@ -306,4 +306,4 @@ class TestSetupWhatsApp(TestCase):
         self.assertEqual(len(devices), 1)
         self.assertEqual(devices[0].name, 'default')
         self.assertEqual(devices[0].number.as_e164, '+31101234567')
-        self.assertEqual(devices[0].method, 'wa')
+        self.assertEqual(devices[0].method, 'whatsapp')

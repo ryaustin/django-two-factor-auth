@@ -27,7 +27,7 @@ def get_available_phone_methods():
     if getattr(settings, 'TWO_FACTOR_SMS_GATEWAY', None):
         methods.append(('sms', _('Text message')))
     if getattr(settings, 'TWO_FACTOR_WHATSAPP_GATEWAY', None):
-        methods.append(('wa', _('WhatsApp message')))
+        methods.append(('whatsapp', _('WhatsApp message')))
     return methods
 
 

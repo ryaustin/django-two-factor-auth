@@ -33,4 +33,4 @@ def update_registered_methods(sender, setting, value, **kwargs):
     if getattr(settings, 'TWO_FACTOR_WHATSAPP_GATEWAY', None):
         registry.register(WhatsAppMethod())
     else:
-        registry.unregister('wa')
+        registry.unregister('whatsapp')

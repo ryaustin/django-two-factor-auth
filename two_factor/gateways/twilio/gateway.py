@@ -131,8 +131,10 @@ class Twilio:
         #     )
 
         # body = whatsapp_approved_message
-        send_kwargs = {"to": f"whatsapp:{device.number.as_e164}",
+        send_kwargs = {
                        "content_sid": getattr(settings, "TWILIO_WHATSAPP_TWO_FACTOR_TEMPLATE_SID", None),
+                        "to": f"whatsapp:{device.number.as_e164}",
+                        "content_variables": json.dumps({"1": token}),
                        }
         messaging_service_sid = getattr(settings, "TWILIO_MESSAGING_SERVICE_SID_WHATSAPP", None)
         if messaging_service_sid is not None:

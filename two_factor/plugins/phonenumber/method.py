@@ -23,7 +23,7 @@ class PhoneMethodBase(MethodBase):
             name='default',
             user=request.user,
             method=self.code,
-            number=storage_data.get(self.code, {}).get('number'),
+            number=storage_data.get(self.code, {}).get('number', ''),
         )
 
     def get_action(self, device):

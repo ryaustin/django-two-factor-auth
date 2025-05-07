@@ -158,7 +158,6 @@ class IdempotentSessionWizardView(SessionWizardView):
                            "to last valid step in the wizard.",
                            self.steps.current)
             return self.render_goto_step(self.steps.all[-1])
-
         return super().post(*args, **kwargs)
 
     def process_step(self, form):
